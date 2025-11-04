@@ -1,0 +1,41 @@
+{
+  "name": "elvin-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^17.0.0",
+    "@angular/common": "^17.0.0",
+    "@angular/compiler": "^17.0.0",
+    "@angular/core": "^17.0.0",
+    "@angular/forms": "^17.0.0",
+    "@angular/platform-browser": "^17.0.0",
+    "@angular/platform-browser-dynamic": "^17.0.0",
+    "@angular/router": "^17.0.0",
+    "@opentelemetry/api": "^1.8.0",
+    "@opentelemetry/auto-instrumentations-web": "^0.46.0",
+    "@opentelemetry/core": "^1.21.0",
+    "@opentelemetry/exporter-otlp-http": "^0.46.0",
+    "@opentelemetry/instrumentation": "^0.46.0",
+    "@opentelemetry/resources": "^1.21.0",
+    "@opentelemetry/sdk-trace-web": "^1.21.0",
+    "@opentelemetry/semantic-conventions": "^1.21.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.14.2"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^17.0.0",
+    "@angular/cli": "^17.0.0",
+    "@angular/compiler-cli": "^17.0.0",
+    "@types/node": "^20.10.0",
+    "typescript": "~5.2.2"
+  }
+}
+

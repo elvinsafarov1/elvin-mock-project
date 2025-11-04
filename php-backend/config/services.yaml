@@ -1,0 +1,23 @@
+parameters:
+    env(JAVA_SERVICE_URL): 'http://java-service:8080'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+            - '../src/Repository/'
+
+    App\Service\JavaServiceClient:
+        arguments:
+            $javaServiceUrl: '%env(JAVA_SERVICE_URL)%'
+
+    App\EventListener\OpenTelemetryListener:
+        tags:
+            - { name: kernel.event_subscriber }

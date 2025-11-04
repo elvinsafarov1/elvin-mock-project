@@ -1,0 +1,41 @@
+<div class="container">
+  <h1>{{ title }}</h1>
+
+  <div class="loading" *ngIf="loading">Загрузка...</div>
+
+  <div class="main-content">
+    <div class="users-section">
+      <h2>Пользователи</h2>
+      <div class="user-list">
+        <div class="user-item" *ngFor="let user of users" (click)="selectUser(user)">
+          <strong>{{ user.name }}</strong> - {{ user.email }}
+        </div>
+      </div>
+
+      <div class="create-user">
+        <h3>Создать нового пользователя</h3>
+        <input type="text" [(ngModel)]="newUser.name" placeholder="Имя" />
+        <input type="email" [(ngModel)]="newUser.email" placeholder="Email" />
+        <button (click)="createUser()">Создать</button>
+      </div>
+    </div>
+
+    <div class="user-details" *ngIf="selectedUser">
+      <h2>Детали пользователя</h2>
+      <div class="detail-item">
+        <strong>ID:</strong> {{ selectedUser.id }}
+      </div>
+      <div class="detail-item">
+        <strong>Имя:</strong> {{ selectedUser.name }}
+      </div>
+      <div class="detail-item">
+        <strong>Email:</strong> {{ selectedUser.email }}
+      </div>
+      <div class="detail-item" *ngIf="selectedUser.external_data">
+        <strong>Внешние данные:</strong>
+        <pre>{{ selectedUser.external_data | json }}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+

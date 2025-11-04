@@ -1,0 +1,17 @@
+#!/usr/bin/env php
+<?php
+
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Runtime\Runtime;
+
+$_SERVER['APP_ENV'] = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? 'dev';
+$_SERVER['APP_DEBUG'] = $_SERVER['APP_DEBUG'] ?? $_ENV['APP_DEBUG'] ?? '1';
+
+require dirname(__DIR__).'/vendor/autoload.php';
+
+$runtime = new Runtime($_SERVER + $_ENV);
+[$app, $args] = $runtime->getResolver(Application::class)->resolve();
+
+$app->run(new ArgvInput($args));
+
