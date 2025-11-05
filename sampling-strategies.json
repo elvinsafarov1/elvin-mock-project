@@ -1,0 +1,23 @@
+{
+  "default_strategy": {
+    "type": "probabilistic",
+    "param": 0.1
+  },
+  "service_strategies": [
+    {
+      "service": "java-service",
+      "type": "probabilistic",
+      "param": 0.1
+    },
+    {
+      "service": "php-backend",
+      "type": "probabilistic",
+      "param": 0.1
+    },
+    {
+      "service": "frontend",
+      "type": "probabilistic",
+      "param": 0.1
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+# Jaeger Configuration with persistent storage and sampling
+version: 3.1
+
+query:
+  base-path: /
+
+collector:
+  # Set sampling strategy to 10%
+  sampling:
+    strategies-file: /etc/jaeger/strategies.json
+
+storage:
+  type: badger
+  badger:
+    # Persistent storage configuration
+    directory-key: /badger/data/keys
+    directory-value: /badger/data/values
+    # Enable persistence 
+    ephemeral: false
+    # Set memory limits if needed (for in-memory with size limit options)
+    memtable-size: 67108864  # 64MB
+    num-memtables: 5
+    num-level-zero-tables: 5
+    num-level-zero-tables-stall: 10
+    value-log-file-size: 1073741824  # 1GB
+    num-compactors: 4
+    num-levels: 7
+    options-dir: /badger/data/options
+
+# Sampling strategy file content
+strategies:
+  - service: "*"
+    operation: "*"
+    type: "probabilistic"
+    param: 0.1  # 10% sampling rate

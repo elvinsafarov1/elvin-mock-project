@@ -90,6 +90,14 @@ All services are configured to export telemetry data (traces, metrics, logs) to 
 - Provides distributed tracing visualization
 - Exposes OTLP endpoints for trace collection
 - UI available at http://localhost:16686
+- **Persistent Storage**: Uses Badger DB with persistent volume storage for trace data
+- **Sampling**: Configured with 10% probabilistic sampling to manage storage usage
+- **Storage Path**: `/badger` volume mounted for persistence across restarts
+- **Ports**: 
+  - UI: 16686
+  - OTLP gRPC: 4317
+  - OTLP HTTP: 4318
+  - HTTP Collector: 14268
 
 ### Tempo
 - Log aggregation and storage

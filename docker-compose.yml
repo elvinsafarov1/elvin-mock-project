@@ -106,9 +106,10 @@ services:
     networks:
       - app-network
 
-  # Jaeger for Distributed Tracing
+  # Jaeger for Distributed Tracing with persistent storage and 10% sampling
   jaeger:
     image: jaegertracing/all-in-one:latest
+    user: root  # Run as root to avoid permission issues with volume mounts
     ports:
       - "16686:16686"  # Jaeger UI
       - "4317:4317"    # OTLP gRPC
@@ -117,12 +118,25 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
       - LOG_LEVEL=debug
+      # 10% probabilistic sampling configuration
+      - SAMPLING_STRATEGIES_FILE=/etc/jaeger/sampling-strategies.json
+      # Badger storage configuration
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL=false
+      - BADGER_DIRECTORY_VALUE=/badger/data
+      - BADGER_DIRECTORY_KEY=/badger/key
+    volumes:
+      # Persistent storage for badger DB (mounted at root badger directory)
+      - jaeger_data:/badger
+      # Configuration files for sampling strategies
+      - ./sampling-strategies.json:/etc/jaeger/sampling-strategies.json
     networks:
       - app-network
 
   # Tempo
   tempo:
     image: grafana/tempo:latest
+    user: root  # Run as root to avoid permission issues with volume mounts
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
       - ./tempo-config.yaml:/etc/tempo.yaml
@@ -168,6 +182,8 @@ volumes:
   tempo_data:
   grafana_data:
   prometheus_data:
+  # Jaeger persistent storage for badger database
+  jaeger_data:
 
 networks:
   app-network:
