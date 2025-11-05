@@ -1,41 +1,63 @@
+// src/app/telemetry.ts
+import { WebTracerProvider } from '@opentelemetry/sdk-trace-web';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load';
+import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
+import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request';
+import { ZoneContextManager } from '@opentelemetry/context-zone';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { WebTracerProvider } from '@opentelemetry/sdk-trace-web';
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-otlp-http';
-import { getWebAutoInstrumentations } from '@opentelemetry/auto-instrumentations-web';
+import { registerInstrumentations } from '@opentelemetry/instrumentation';
 
 export async function initOpenTelemetry(): Promise<void> {
-  // Use environment variable or default to Jaeger endpoint
-  const endpoint = (window as any).__OTEL_ENDPOINT__ || 'http://localhost:4318';
-  const serviceName = (window as any).__OTEL_SERVICE_NAME__ || 'angular-frontend';
+  const otlpEndpoint =
+    (typeof window !== 'undefined' && (window as any).OTEL_EXPORTER_OTLP_ENDPOINT)
+      ? (window as any).OTEL_EXPORTER_OTLP_ENDPOINT
+      : 'http://tempo:4318/v1/traces';
 
   const resource = new Resource({
-    [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
+    [SemanticResourceAttributes.SERVICE_NAME]: 'angular-frontend',
     [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
+    [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: 'production',
   });
 
-  const provider = new WebTracerProvider({
-    resource: resource,
+  const exporter = new OTLPTraceExporter({ url: otlpEndpoint });
+
+  const provider = new WebTracerProvider({ resource });
+  provider.addSpanProcessor(
+    new BatchSpanProcessor(exporter, {
+      maxQueueSize: 100,
+      maxExportBatchSize: 10,
+      scheduledDelayMillis: 500,
+      exportTimeoutMillis: 30000,
+    })
+  );
+
+  provider.register({
+    contextManager: new ZoneContextManager(),
   });
 
-  const exporter = new OTLPTraceExporter({
-    url: `${endpoint}/v1/traces`,
+  registerInstrumentations({
+    instrumentations: [
+      new DocumentLoadInstrumentation(),
+      new FetchInstrumentation({
+        propagateTraceHeaderCorsUrls: [
+          /http:\/\/localhost:8080\/.*/,
+          /http:\/\/localhost:8000\/.*/,
+          new RegExp(`${window.location.origin}/.*`),
+        ],
+        clearTimingResources: true,
+      }),
+      new XMLHttpRequestInstrumentation({
+        propagateTraceHeaderCorsUrls: [
+          /http:\/\/localhost:8080\/.*/,
+          /http:\/\/localhost:8000\/.*/,
+          new RegExp(`${window.location.origin}/.*`),
+        ],
+      }),
+    ],
   });
 
-  provider.addSpanProcessor(new BatchSpanProcessor(exporter));
-  provider.register();
-
-  // Auto-instrumentation for HTTP requests
-  getWebAutoInstrumentations({
-    '@opentelemetry/instrumentation-fetch': {
-      enabled: true,
-    },
-    '@opentelemetry/instrumentation-xml-http-request': {
-      enabled: true,
-    },
-  });
-
-  console.log('OpenTelemetry initialized for Angular frontend', { endpoint, serviceName });
+  console.log('✅ OpenTelemetry initialized, exporting to:', otlpEndpoint);
 }
-

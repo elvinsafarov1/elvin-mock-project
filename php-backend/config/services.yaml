@@ -12,12 +12,23 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-            - '../src/Repository/'
 
-    App\Service\JavaServiceClient:
+    # OpenTelemetry Configuration
+    App\OpenTelemetry\TracerProviderFactory:
+        public: true
+
+    OpenTelemetry\API\Trace\TracerProviderInterface:
+        factory: ['App\OpenTelemetry\TracerProviderFactory', 'create']
+
+    OpenTelemetry\API\Trace\TracerInterface:
+        factory: ['@OpenTelemetry\API\Trace\TracerProviderInterface', 'getTracer']
         arguments:
-            $javaServiceUrl: '%env(JAVA_SERVICE_URL)%'
+            - 'php-backend'
+            - '1.0.0'
 
-    App\EventListener\OpenTelemetryListener:
+    # Event Subscriber for automatic tracing
+    App\EventSubscriber\OpenTelemetrySubscriber:
+        arguments:
+            $tracer: '@OpenTelemetry\API\Trace\TracerInterface'
         tags:
             - { name: kernel.event_subscriber }

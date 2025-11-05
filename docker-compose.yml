@@ -1,0 +1,174 @@
+services:
+  # Angular Frontend
+  frontend:
+    build:
+      context: ./angular-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - java-service
+      - php-web
+    environment:
+      - NODE_ENV=production
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+    networks:
+      - app-network
+
+  # Java Service
+  java-service:
+    build:
+      context: ./java-service
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xmx512m
+      - OTEL_SERVICE_NAME=java-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+    depends_on:
+      jaeger:
+        condition: service_started
+      php-backend:
+        condition: service_started
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # PHP Backend (PHP-FPM)
+  php-backend:
+    build:
+      context: ./php-backend
+      dockerfile: Dockerfile
+    expose:
+      - "9000"
+    environment:
+      - APP_ENV=prod
+      - APP_SECRET=${APP_SECRET:-change_me_in_production}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION}&charset=utf8
+      # OpenTelemetry configuration
+      - OTEL_SERVICE_NAME=php-backend
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_PHP_AUTOLOAD_ENABLED=true
+      - OTEL_LOGS_EXPORTER=none
+      - OTEL_METRICS_EXPORTER=none
+    depends_on:
+      jaeger:
+        condition: service_started
+      db:
+        condition: service_healthy
+    volumes:
+      - ./php-backend:/var/www
+    networks:
+      - app-network
+
+  # PHP Backend Web Server (Apache)
+  php-web:
+    image: webdevops/apache:alpine
+    ports:
+      - "8000:80"
+    depends_on:
+      - php-backend
+      - db
+    volumes:
+      - ./php-backend/public:/app
+      - ./apache-vhost.conf:/opt/docker/etc/apache/vhost.conf
+    environment:
+      - WEB_DOCUMENT_ROOT=/app
+      - PHP_FPM_SCRAPE_URI=tcp://php-backend:9000
+    networks:
+      - app-network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # Jaeger for Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+      - "14268:14268"  # Jaeger HTTP collector
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=debug
+    networks:
+      - app-network
+
+  # Tempo
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo-config.yaml:/etc/tempo.yaml
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200"
+      - "4319:4317"
+      - "4320:4318"
+    networks:
+      - app-network
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus-config.yaml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana-enterprise
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    depends_on:
+      - jaeger
+      - tempo
+      - prometheus
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  tempo_data:
+  grafana_data:
+  prometheus_data:
+
+networks:
+  app-network:
+    driver: bridge

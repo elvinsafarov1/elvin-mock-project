@@ -1,0 +1,16 @@
+# OpenTelemetry Configuration for all services
+# This can be used to configure OTLP exporters for different services
+
+exporters:
+  otlp:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+service:
+  name: app-service
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: :8888

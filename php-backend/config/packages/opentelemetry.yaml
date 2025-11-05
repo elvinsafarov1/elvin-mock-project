@@ -1,0 +1,17 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    OpenTelemetry\SDK\Trace\TracerProviderInterface:
+        factory: ['App\OpenTelemetry\TracerProviderFactory', 'create']
+
+    OpenTelemetry\API\Trace\TracerInterface:
+        factory: ['@OpenTelemetry\SDK\Trace\TracerProviderInterface', 'getTracer']
+        arguments:
+            - 'php-backend'
+            - '1.0.0'
+
+    App\EventSubscriber\OpenTelemetrySubscriber:
+        tags:
+            - { name: kernel.event_subscriber }

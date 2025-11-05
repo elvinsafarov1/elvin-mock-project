@@ -1,46 +1,49 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App;
 
-use OpenTelemetry\API\Globals;
-use OpenTelemetry\SDK\Trace\TracerProviderBuilder;
+use OpenTelemetry\API\Trace\Propagation\TraceContextPropagator;
+use OpenTelemetry\Contrib\Otlp\OtlpHttpTransportFactory;
+use OpenTelemetry\Contrib\Otlp\SpanExporter;
+use OpenTelemetry\SDK\Common\Attribute\Attributes;
+use OpenTelemetry\SDK\Resource\ResourceInfo;
 use OpenTelemetry\SDK\Resource\ResourceInfoFactory;
-use OpenTelemetry\SDK\Trace\SpanProcessor\BatchSpanProcessor;
-use OpenTelemetry\Exporter\Otlp\Exporter;
+use OpenTelemetry\SDK\Sdk;
+use OpenTelemetry\SDK\Trace\Sampler\AlwaysOnSampler;
+use OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor;
+use OpenTelemetry\SDK\Trace\TracerProvider;
+use OpenTelemetry\SemConv\ResourceAttributes;
 
 class OpenTelemetryBootstrap
 {
     public static function init(): void
     {
-        try {
-            $endpoint = getenv('OTEL_EXPORTER_OTLP_ENDPOINT') ?: 'http://jaeger:4318';
-            $serviceName = getenv('OTEL_SERVICE_NAME') ?: 'php-backend';
+        // Define the service name resource attribute
+        $resource = ResourceInfoFactory::defaultResource()->merge(
+            ResourceInfo::create(Attributes::create([
+                ResourceAttributes::SERVICE_NAME => 'php-backend', // Hard-code the service name
+            ]))
+        );
 
-            // Use simple OTLP exporter
-            $exporter = new Exporter([
-                'endpoint' => $endpoint . '/v1/traces',
-                'protocol' => 'http/protobuf',
-            ]);
+        // Manually create the OTLP transport with the Jaeger endpoint hard-coded
+        $transport = (new OtlpHttpTransportFactory())->create(
+             'http://jaeger:4318/v1/traces', // <-- THE GUARANTEED FIX: Hard-coded correct endpoint
+            'application/x-protobuf'
+        );
 
-            $spanProcessor = new BatchSpanProcessor($exporter);
+        $exporter = new SpanExporter($transport);
 
-            $tracerProvider = (new TracerProviderBuilder())
-                ->addSpanProcessor($spanProcessor)
-                ->setResource(ResourceInfoFactory::emptyResource()->merge(
-                    ResourceInfoFactory::create([
-                        'service.name' => $serviceName,
-                        'service.version' => '1.0.0',
-                    ])
-                ))
-                ->build();
+        $tracerProvider = new TracerProvider(
+            new SimpleSpanProcessor($exporter),
+            new AlwaysOnSampler(),
+            $resource
+        );
 
-            Globals::registerInitializer(function () use ($tracerProvider) {
-                return $tracerProvider;
-            });
-        } catch (\Exception $e) {
-            // Log error but don't break application
-            error_log('OpenTelemetry initialization failed: ' . $e->getMessage());
-        }
+        Sdk::builder()
+            ->setTracerProvider($tracerProvider)
+            ->setPropagator(TraceContextPropagator::getInstance())
+            ->buildAndRegisterGlobal();
     }
 }
-

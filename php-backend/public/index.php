@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../vendor/autoload.php';
+\App\OpenTelemetryBootstrap::init();
 use App\Kernel;
 use App\OpenTelemetryBootstrap;
 

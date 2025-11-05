@@ -1,17 +1,13 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Elvin Mock Project</title>
+  <title>Angular Frontend</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <script>
-    // Set OpenTelemetry configuration from environment
-    window.__OTEL_ENDPOINT__ = 'http://localhost:4318';
-    window.__OTEL_SERVICE_NAME__ = 'angular-frontend';
-    window.__API_URL__ = 'http://localhost:8000';
-  </script>
+  <!-- Load environment config before Angular -->
+  <script src="/env-config.js"></script>
 </head>
 <body>
   <app-root></app-root>

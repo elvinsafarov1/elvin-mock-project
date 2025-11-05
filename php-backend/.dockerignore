@@ -1,0 +1,10 @@
+# Ignore lock file to force fresh install
+composer.lock
+
+# Ignore vendor directory
+vendor/
+
+# Ignore cache and logs
+var/
+.env.local
+.env.*.local
